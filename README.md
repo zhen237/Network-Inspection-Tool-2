@@ -1,134 +1,162 @@
-# eNSP MCP Server
+# eNSP MCP 项目
 
-eNSP（Enterprise Network Simulation Platform）设备管理 MCP 服务器，提供 Web UI 界面和 MCP 接口两种方式管理 eNSP 虚拟设备。
+## 项目简介
+
+**eNSP MCP** (Enterprise Network Simulation Platform Model Context Protocol) 是一个基于 Web 的 eNSP 设备管理工具，专为网络工程师和学习者设计。该工具通过 Web 界面提供了对 eNSP 模拟设备的集中管理、配置审计和故障排查功能。
 
 ## 功能特性
 
-- **设备扫描**：扫描指定端口范围的 eNSP 虚拟设备
-- **设备连接**：通过 Telnet 协议连接设备
-- **多终端 CLI**：每个连接的设备拥有独立的 CLI 终端，支持 tab 切换
-- **设备管理**：重命名设备、断开连接
-- **拓扑管理**：上传和保存网络拓扑文件
-- **MCP 接口**：支持 AI 助手通过 MCP 协议调用所有功能
-- **实时同步**：Web UI 与 MCP 数据实时同步
+### 1. 设备管理
+- **设备扫描**：自动扫描指定端口范围（默认 2000-2050）的 eNSP 设备
+- **设备连接**：支持连接到扫描到的 eNSP 设备
+- **设备重命名**：为设备设置自定义名称
+- **多设备管理**：同时连接多个设备，通过标签页切换
+
+### 2. 终端操作
+- **命令执行**：在设备上执行任意命令并查看实时输出
+- **命令历史**：保存命令执行历史记录
+- **实时响应**：通过 Socket.IO 实现实时命令输出
+
+### 3. 设备巡检
+- **自动巡检**：执行预设命令收集设备信息
+- **巡检报告**：生成 HTML 格式的详细巡检报告
+- **巡检内容**：
+  - 设备版本信息 (`display version`)
+  - 系统时间 (`display clock`)
+  - VLAN 配置 (`display vlan`)
+  - 路由表信息 (`display ip routing-table`)
+  - 接口状态 (`display ip interface brief`)
+
+### 4. 基线配置管理
+- **保存基线**：将设备当前配置保存为 `.cfg` 格式的基线文件
+- **基线比对**：与历史基线配置进行比对，生成差异报告
+- **文件管理**：按设备路径自动创建子目录，组织基线文件
+- **配置格式**：使用 eNSP 设备原生的配置格式
+
+### 5. 拓扑管理
+- **拓扑上传**：支持上传 JSON 或文本格式的拓扑文件
+- **拓扑显示**：在界面上显示已加载的拓扑文件
+
+## 技术架构
+
+- **前端**：HTML5 + CSS3 + JavaScript + Socket.IO
+- **后端**：Python Flask + Flask-SocketIO
+- **通信**：Telnet 协议
+- **存储**：文件系统（巡检报告、基线配置、拓扑文件）
+
+## 快速开始
+
+### 环境要求
+- Python 3.7+
+- Flask 2.0+
+- Flask-SocketIO 5.0+
+
+### 安装步骤
+
+1. **克隆项目**
+   ```bash
+   git clone https://github.com/zhen237/Network-Inspection-Tool.git
+   cd Network-Inspection-Tool
+   ```
+
+2. **安装依赖**
+   ```bash
+   pip install flask flask-socketio eventlet
+   ```
+
+3. **启动服务器**
+   ```bash
+   cd mcpensp1
+   python app.py
+   ```
+
+4. **访问界面**
+   打开浏览器，访问 `http://localhost:5001`
+
+## 使用方法
+
+### 1. 扫描设备
+- 在左侧端口范围输入框中设置扫描范围（默认 2000-2050）
+- 点击「扫描」按钮开始扫描设备
+- 扫描完成后，设备列表会显示在左侧
+
+### 2. 连接设备
+- 点击设备列表中的「连接」按钮
+- 连接成功后，会在右侧打开一个终端标签页
+- 在终端输入框中输入命令并按 Enter 执行
+
+### 3. 设备巡检
+- 确保设备已连接
+- 点击设备列表中的「巡检」按钮
+- 等待巡检完成，系统会生成巡检报告
+- 在日志区域点击「下载巡检报告」链接查看报告
+
+### 4. 保存基线
+- 确保设备已连接
+- 点击设备列表中的「保存基线」按钮
+- 等待基线保存完成，系统会生成 `.cfg` 格式的基线文件
+- 在日志区域点击「下载基线文件」链接查看基线配置
+
+### 5. 基线比对
+- 确保设备已连接
+- 点击设备列表中的「基线比对」按钮
+- 在弹出的模态框中选择要比对的基线文件
+- 点击「确定」按钮开始比对
+- 等待比对完成，系统会生成比对报告
+- 在日志区域点击「下载比对报告」链接查看比对结果
+
+### 6. 上传拓扑
+- 点击顶部的「上传拓扑」按钮
+- 选择要上传的拓扑文件（支持 `.json` 和 `.txt` 格式）
+- 上传完成后，拓扑文件名称会显示在界面上
 
 ## 项目结构
 
 ```
-mcpensp1/
-├── app.py              # Flask 主服务器（Web UI + HTTP API）
-├── mcp_server.py       # MCP 服务器
-├── mcp.json            # MCP 配置文件
-├── requirements.txt    # Python 依赖
-├── templates/
-│   └── index.html      # Web UI 页面
-└── uploads/            # 拓扑文件上传目录
+Network-Inspection-Tool/
+├── mcpensp1/
+│   ├── app.py              # 主应用程序
+│   ├── mcp_server.py       # MCP 服务器
+│   ├── templates/
+│   │   └── index.html      # Web 界面
+│   ├── uploads/            # 拓扑文件上传目录
+│   ├── inspections/        # 巡检报告目录
+│   └── baselines/          # 基线配置目录
+└── README.md               # 项目说明文档
 ```
-
-## 快速开始
-
-### 1. 安装依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-要使用两个终端启动两个服务器，首先启动主服务器再启动MCP服务器
-
-### 2. 启动主服务器
-
-```bash
-python app.py
-```
-
-服务器启动后访问 <http://127.0.0.1:5000>
-
-3，启动MCP服务器
-
-<br />
-
-```shellscript
-python mcp_server.py
-```
-
-### 3. 配置 MCP（可选）
-
-如需使用 MCP 接口，将 `mcp.json` 配置到你的 MCP 客户端：
-
-```json
-{
-  "mcpServers": {
-    "ensp": {
-      "command": "python",
-      "args": ["E:\\Trae CN\\code\\code\\mcpensp1\\mcp_server.py"],
-      "env": {},
-      "description": "eNSP Device MCP Server"
-    }
-  }
-}
-```
-
-```json
-"args": ["E:\\Trae CN\\code\\code\\mcpensp1\\mcp_server.py"],这个地方要修改为你的mcpserver.py的绝对路径
-```
-
-<br />
-
-## Web UI 使用指南
-
-### 扫描设备
-
-1. 设置端口范围（默认 2000-2050）
-2. 点击「扫描」按钮
-3. 扫描结果显示在左侧设备列表
-
-### 连接设备
-
-1. 在设备列表点击设备对应的「连接」按钮
-2. 连接成功后，左侧显示绿色边框，右侧显示该设备的 CLI 终端
-3. 在终端输入框输入命令，按 Enter 发送
-
-### 多终端管理
-
-- 每个连接的设备在右侧区域有独立的 tab 标签页
-- 点击 tab 切换不同设备的终端
-- 点击 tab 上的 × 按钮断开该设备
-- 点击侧边栏的「已连接」可快速切换到该设备终端
-
-### 设备重命名
-
-1. 鼠标悬停在设备名称上，点击 \[✎] 图标
-2. 在弹窗中输入新名称
-3. 点击「确定」保存
-
-### 拓扑管理
-
-点击「上传拓扑」按钮，可上传 JSON 或 TXT 格式的拓扑文件。
-
-## MCP 工具列表
-
-| 工具名                     | 说明        | 参数                          |
-| ----------------------- | --------- | --------------------------- |
-| `scan_devices`          | 扫描设备      | `start`, `end`（端口范围）        |
-| `connect_device`        | 连接设备      | `port`（端口号）                 |
-| `send_command`          | 发送命令      | `path`（设备路径）, `command`（命令） |
-| `disconnect_device`     | 断开设备      | `path`（设备路径）                |
-| `get_connected_devices` | 获取已连接设备列表 | 无                           |
-| `rename_device`         | 重命名设备     | `path`, `name`              |
-| `get_topology`          | 获取拓扑数据    | 无                           |
-| `save_topology`         | 保存拓扑数据    | `data`（拓扑对象）                |
-
-## 技术栈
-
-- **后端**：Flask + Flask-SocketIO + eventlet
-- **前端**：原生 JavaScript + Socket.IO 客户端
-- **协议**：Telnet（设备通信）、Socket.IO（实时通信）、MCP（AI 接口）
-- **样式**：Catppuccin Mocha 主题
 
 ## 注意事项
 
-1. 确保 eNSP 虚拟设备已在本地运行
-2. 默认端口范围 2000-2050 对应 eNSP 设备端口
-3. MCP 服务器需要主服务器先启动
-4. 页面刷新后会自动恢复已连接的设备终端
+- 确保 eNSP 设备已启动并运行
+- 扫描端口范围应包含 eNSP 设备的 Telnet 端口
+- 执行配置相关命令时，可能需要较长时间，请耐心等待
+- 基线文件和巡检报告保存在项目目录中，定期清理以节省空间
 
+## 故障排查
+
+### 常见问题
+
+1. **无法连接设备**
+   - 检查设备是否已启动
+   - 检查端口是否正确
+   - 检查网络连接
+
+2. **命令执行超时**
+   - 对于配置相关命令，系统已设置较长超时时间
+   - 请确保设备响应正常
+
+3. **基线文件为空**
+   - 检查设备是否支持 `display current-configuration` 命令
+   - 检查设备是否有配置信息
+
+4. **报告生成失败**
+   - 检查设备是否连接正常
+   - 检查磁盘空间是否充足
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request 来改进这个项目！
+
+## 许可证
+
+本项目采用 MIT 许可证。
