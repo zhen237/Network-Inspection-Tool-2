@@ -5,74 +5,85 @@
   <title>eNSP MCP</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: sans-serif; background: #1e1e2e; color: #cdd6f4; height: 100vh; display: flex; flex-direction: column; }
-    .header { padding: 12px 16px; background: #181825; border-bottom: 1px solid #313244; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { font-size: 14px; }
-    .header-left { display: flex; align-items: center; gap: 8px; }
-    .scan-btn { background: #89b4fa; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; color: #1e1e2e; font-size: 12px; }
-    .scan-btn:hover { background: #b4befe; }
-    .upload-btn { background: #a6e3a1; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; color: #1e1e2e; font-size: 12px; }
-    .upload-btn:hover { background: #94e2d5; }
-    .topology-indicator { font-size: 11px; color: #a6e3a1; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f8f9fa; color: #333; height: 100vh; display: flex; flex-direction: column; }
+    .header { padding: 12px 16px; background: #ffffff; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 16px; color: #495057; font-weight: 600; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .scan-btn { background: #007bff; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; color: white; font-size: 12px; font-weight: 500; }
+    .scan-btn:hover { background: #0069d9; }
+    .upload-btn { background: #28a745; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; color: white; font-size: 12px; font-weight: 500; }
+    .upload-btn:hover { background: #218838; }
+    .topology-indicator { font-size: 12px; color: #28a745; font-weight: 500; }
     #topologyInput { display: none; }
     .content { flex: 1; display: flex; overflow: hidden; }
-    .sidebar { width: 220px; background: #181825; border-right: 1px solid #313244; display: flex; flex-direction: column; }
-    .port-range { padding: 12px 16px; border-bottom: 1px solid #313244; display: flex; gap: 8px; align-items: center; }
-    .port-range input { width: 55px; background: #11111b; border: 1px solid #313244; padding: 6px; border-radius: 4px; color: #cdd6f4; font-size: 12px; }
-    .device-list { flex: 1; overflow-y: auto; padding: 8px; }
-    .device-item { padding: 10px; margin-bottom: 4px; background: #11111b; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; }
-    .device-item:hover { background: #181825; }
-    .device-item.active { border: 1px solid #89b4fa; }
-    .device-item.connected { border-left: 3px solid #a6e3a1; }
+    .sidebar { width: 240px; background: #ffffff; border-right: 1px solid #e9ecef; display: flex; flex-direction: column; box-shadow: 1px 0 3px rgba(0,0,0,0.05); }
+    .port-range { padding: 16px; border-bottom: 1px solid #e9ecef; display: flex; gap: 10px; align-items: center; background: #f8f9fa; }
+    .port-range input { width: 60px; background: #ffffff; border: 1px solid #ced4da; padding: 8px; border-radius: 4px; color: #495057; font-size: 12px; }
+    .device-list { flex: 1; overflow-y: auto; padding: 10px; }
+    .device-item { padding: 12px; margin-bottom: 6px; background: #ffffff; border: 1px solid #e9ecef; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .device-item:hover { background: #f8f9fa; border-color: #dee2e6; }
+    .device-item.active { border: 1px solid #007bff; box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25); }
+    .device-item.connected { border-left: 4px solid #28a745; }
     .device-header { display: flex; justify-content: space-between; align-items: center; }
     .device-info { flex: 1; }
-    .device-name { font-size: 12px; display: flex; align-items: center; gap: 4px; }
-    .device-name .edit-icon { opacity: 0; cursor: pointer; font-size: 10px; }
+    .device-name { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; color: #495057; }
+    .device-name .edit-icon { opacity: 0; cursor: pointer; font-size: 11px; color: #6c757d; }
     .device-name:hover .edit-icon { opacity: 1; }
-    .device-port { font-size: 10px; color: #6c7086; margin-top: 2px; }
-    .device-actions { display: flex; gap: 4px; align-items: center; }
-    .device-actions-row { display: flex; gap: 4px; justify-content: flex-end; }
-    .connect-btn { background: #a6e3a1; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; color: #1e1e2e; font-size: 11px; flex: 1; }
-    .connect-btn:hover { background: #94e2d5; }
-    .connected-badge { background: #313244; color: #a6e3a1; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; flex: 1; text-align: center; }
-    .rename-btn { background: #313244; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; color: #6c7086; font-size: 10px; }
-    .rename-btn:hover { background: #45475a; color: #cdd6f4; }
-    .disconnect-btn { background: #f38ba8; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; color: #1e1e2e; font-size: 11px; }
-    .disconnect-btn:hover { background: #eba0ac; }
-    .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .tabs { background: #181825; border-bottom: 1px solid #313244; display: flex; padding: 0 8px; overflow-x: auto; min-height: 40px; }
-    .tab { padding: 10px 16px; font-size: 12px; color: #6c7086; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-    .tab:hover { color: #cdd6f4; }
-    .tab.active { color: #cdd6f4; border-bottom-color: #89b4fa; }
-    .tab .close { width: 16px; height: 16px; border-radius: 50%; background: #313244; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
-    .tab .close:hover { background: #f38ba8; color: #1e1e2e; }
-    .empty-tabs { padding: 10px 16px; font-size: 12px; color: #6c7086; }
-    .terminals { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
-    .terminal-panel { background: #11111b; border-radius: 8px; display: none; flex-direction: column; height: 300px; overflow: hidden; }
+    .device-port { font-size: 11px; color: #6c757d; margin-top: 2px; }
+    .device-actions { display: flex; gap: 6px; align-items: center; }
+    .device-actions-row { display: flex; gap: 6px; justify-content: flex-end; }
+    .connect-btn { background: #28a745; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; color: white; font-size: 11px; font-weight: 500; flex: 1; }
+    .connect-btn:hover { background: #218838; }
+    .connected-badge { background: #e6f4ea; color: #28a745; padding: 5px 12px; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; flex: 1; text-align: center; border: 1px solid #c3e6cb; }
+    .rename-btn { background: #6c757d; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; color: white; font-size: 10px; font-weight: 500; }
+    .rename-btn:hover { background: #5a6268; }
+    .disconnect-btn { background: #dc3545; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; color: white; font-size: 11px; font-weight: 500; }
+    .disconnect-btn:hover { background: #c82333; }
+    .inspect-btn { background: #ffc107; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; color: #212529; font-size: 11px; font-weight: 500; }
+    .inspect-btn:hover { background: #e0a800; }
+    .baseline-btn { background: #17a2b8; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; color: white; font-size: 11px; font-weight: 500; }
+    .baseline-btn:hover { background: #138496; }
+    .compare-btn { background: #6f42c1; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; color: white; font-size: 11px; font-weight: 500; }
+    .compare-btn:hover { background: #5a32a3; }
+    .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f8f9fa; }
+    .tabs { background: #ffffff; border-bottom: 1px solid #e9ecef; display: flex; padding: 0 10px; overflow-x: auto; min-height: 44px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .tab { padding: 12px 18px; font-size: 13px; color: #6c757d; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; display: flex; align-items: center; gap: 10px; flex-shrink: 0; font-weight: 500; }
+    .tab:hover { color: #495057; }
+    .tab.active { color: #007bff; border-bottom-color: #007bff; }
+    .tab .close { width: 18px; height: 18px; border-radius: 50%; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; color: #6c757d; }
+    .tab .close:hover { background: #dc3545; color: white; }
+    .empty-tabs { padding: 12px 18px; font-size: 13px; color: #6c757d; }
+    .terminals { flex: 6; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+    .terminal-panel { background: #ffffff; border: 1px solid #e9ecef; border-radius: 8px; display: none; flex-direction: column; flex: 1; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     .terminal-panel.active { display: flex; }
-    .terminal-header { padding: 8px 12px; background: #181825; border-bottom: 1px solid #313244; font-size: 12px; color: #89b4fa; display: flex; justify-content: space-between; align-items: center; }
-    .terminal-header .rename-icon { opacity: 0; cursor: pointer; font-size: 10px; }
+    .terminal-header { padding: 10px 14px; background: #f8f9fa; border-bottom: 1px solid #e9ecef; font-size: 13px; color: #495057; display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
+    .terminal-header .rename-icon { opacity: 0; cursor: pointer; font-size: 11px; color: #6c757d; }
     .terminal-header:hover .rename-icon { opacity: 1; }
-    .terminal-body { flex: 1; padding: 12px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.5; }
-    .terminal-body .output { color: #a6e3a1; white-space: pre-wrap; word-break: break-all; }
-    .terminal-body .input { color: #89b4fa; white-space: pre-wrap; }
-    .terminal-body .error { color: #f38ba8; }
-    .terminal-input { padding: 8px 12px; background: #181825; border-top: 1px solid #313244; display: flex; align-items: center; gap: 8px; }
-    .terminal-input .prompt { color: #89b4fa; font-size: 12px; }
-    .terminal-input input { flex: 1; background: #11111b; border: 1px solid #313244; padding: 6px 10px; border-radius: 4px; color: #cdd6f4; font-family: monospace; font-size: 12px; outline: none; }
-    .terminal-input input:focus { border-color: #89b4fa; }
-    .logs { background: #181825; border-top: 1px solid #313244; max-height: 100px; overflow-y: auto; padding: 8px; font-size: 11px; }
-    .log-item { padding: 2px 0; }
-    .log-item.success { color: #a6e3a1; }
-    .log-item.error { color: #f38ba8; }
+    .terminal-body { flex: 1; padding: 14px; overflow-y: auto; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 12px; line-height: 1.5; background: #f8f9fa; }
+    .terminal-body .output { color: #28a745; white-space: pre-wrap; word-break: break-all; }
+    .terminal-body .input { color: #007bff; white-space: pre-wrap; }
+    .terminal-body .error { color: #dc3545; }
+    .terminal-input { padding: 10px 14px; background: #ffffff; border-top: 1px solid #e9ecef; display: flex; align-items: center; gap: 10px; }
+    .terminal-input .prompt { color: #6c757d; font-size: 13px; font-weight: 500; }
+    .terminal-input input { flex: 1; background: #f8f9fa; border: 1px solid #ced4da; padding: 8px 12px; border-radius: 4px; color: #495057; font-family: monospace; font-size: 12px; outline: none; }
+    .terminal-input input:focus { border-color: #007bff; box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25); }
+    .logs { background: #ffffff; border-top: 1px solid #e9ecef; flex: 4; overflow-y: auto; padding: 10px; font-size: 12px; box-shadow: 0 -1px 3px rgba(0,0,0,0.05); }
+    .log-item { padding: 3px 0; }
+    .log-item.success { color: #28a745; }
+    .log-item.error { color: #dc3545; }
     .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: #181825; padding: 20px; border-radius: 8px; min-width: 300px; }
-    .modal-title { font-size: 14px; margin-bottom: 12px; }
-    .modal-input { width: 100%; background: #11111b; border: 1px solid #313244; padding: 8px; border-radius: 4px; color: #cdd6f4; font-size: 12px; margin-bottom: 12px; }
-    .modal-buttons { display: flex; justify-content: flex-end; gap: 8px; }
-    .modal-btn { padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; border: none; }
-    .modal-btn.cancel { background: #313244; color: #cdd6f4; }
-    .modal-btn.confirm { background: #89b4fa; color: #1e1e2e; }
+    .modal-content { background: #ffffff; padding: 24px; border-radius: 8px; min-width: 320px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #495057; }
+    .modal-input { width: 100%; background: #f8f9fa; border: 1px solid #ced4da; padding: 10px; border-radius: 4px; color: #495057; font-size: 13px; margin-bottom: 16px; }
+    .modal-input:focus { border-color: #007bff; box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25); outline: none; }
+    .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-btn { padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; border: none; }
+    .modal-btn.cancel { background: #6c757d; color: white; }
+    .modal-btn.cancel:hover { background: #5a6268; }
+    .modal-btn.confirm { background: #007bff; color: white; }
+    .modal-btn.confirm:hover { background: #0069d9; }
+    a { color: #007bff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -195,6 +206,17 @@
       log(`设备已重命名为: ${data.name}`);
     });
 
+    socket.on('device_inspected', (data) => {
+      log(`巡检完成: ${deviceNames[data.path] || data.path}，报告已保存`, 'success');
+      // 提供报告下载链接
+      const logs = document.getElementById('logs');
+      const downloadLink = document.createElement('div');
+      downloadLink.className = 'log-item success';
+      downloadLink.innerHTML = `[${new Date().toLocaleTimeString()}]  <a href="/inspections/${data.filename}" target="_blank" style="color: #a6e3a1; text-decoration: underline;">下载巡检报告</a>`;
+      logs.appendChild(downloadLink);
+      logs.scrollTop = logs.scrollHeight;
+    });
+
     socket.on('topology_updated', (data) => {
       if (data && data.filename) {
         topologyLoaded = true;
@@ -247,7 +269,10 @@
             }
           </div>
           ${isConnected ?
-            `<button class="disconnect-btn" onclick="disconnectDeviceFromList('${d.path}')" style="width: 100%; margin-top: 4px;">断开连接</button>` : ''
+            `<div class="device-actions-row">
+               <button class="disconnect-btn" onclick="disconnectDeviceFromList('${d.path}')">断开连接</button>
+               <button class="inspect-btn" onclick="inspectDevice('${d.path}')">巡检</button>
+             </div>` : ''
           }
         </div>
       `;
@@ -426,6 +451,11 @@
 
     function disconnectDevice(path) {
       socket.emit('disconnect_device', { path });
+    }
+
+    function inspectDevice(path) {
+      log(`正在巡检 ${deviceNames[path] || path}...`);
+      socket.emit('inspect_device', { path });
     }
 
     function log(msg, type = '') {

@@ -1,0 +1,125 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备巡检报告 - 127.0.0.1:2001</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; background: #f8f9fa; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: #2c3e50; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #007bff; }
+        h2 { color: #34495e; margin: 20px 0 10px; padding-bottom: 5px; border-bottom: 1px solid #dee2e6; }
+        .info-box { background: #ffffff; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .info-item { margin: 10px 0; }
+        .info-label { font-weight: bold; color: #2c3e50; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px; border: 1px solid #dee2e6; }
+        .timestamp { color: #6c757d; font-size: 14px; margin-bottom: 20px; }
+        .section { margin: 30px 0; background: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>设备巡检报告</h1>
+        <div class="timestamp">生成时间: 2026-04-22 16:19:21</div>
+        
+        <div class="section">
+            <h2>基本信息</h2>
+            <div class="info-box">
+                <div class="info-item"><span class="info-label">设备名称:</span> 127.0.0.1:2001</div>
+                <div class="info-item"><span class="info-label">设备路径:</span> 127.0.0.1:2001</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>版本信息</h2>
+            <pre>Huawei Versatile Routing Platform Software
+VRP (R) software, Version 5.110 (S5700 V200R001C00)
+Copyright (c) 2000-2011 HUAWEI TECH CO., LTD
+
+Quidway S5700-28C-HI Routing Switch uptime is 0 week, 0 day, 21 hours, 22 minutes</pre>
+        </div>
+        
+        <div class="section">
+            <h2>系统时间</h2>
+            <pre>2026-04-22 16:19:25-08:00
+Wednesday
+Time Zone(China-Standard-Time) : UTC-08:00</pre>
+        </div>
+        
+        <div class="section">
+            <h2>VLAN 信息</h2>
+            <pre>The total number of vlans is : 4
+--------------------------------------------------------------------------------
+U: Up;         D: Down;         TG: Tagged;         UT: Untagged;
+MP: Vlan-mapping;               ST: Vlan-stacking;
+#: ProtocolTransparent-vlan;    *: Management-vlan;
+--------------------------------------------------------------------------------
+
+VID  Type    Ports                                                          
+--------------------------------------------------------------------------------
+1    common  UT:GE0/0/2(U)      GE0/0/3(U)      GE0/0/4(D)      GE0/0/5(D)      
+                GE0/0/6(D)      GE0/0/7(D)      GE0/0/8(D)      GE0/0/9(D)      
+                GE0/0/10(D)     GE0/0/11(D)     GE0/0/12(D)     GE0/0/13(D)     
+                GE0/0/14(D)     GE0/0/15(D)     GE0/0/16(D)     GE0/0/17(D)     
+                GE0/0/18(D)     GE0/0/19(D)     GE0/0/20(D)     GE0/0/21(D)     
+                GE0/0/22(D)     GE0/0/23(D)     GE0/0/24(D)                     
+10   common  TG:GE0/0/2(U)      GE0/0/3(U)                                      
+20   common  TG:GE0/0/2(U)      GE0/0/3(U)                                      
+100  common  UT:GE0/0/1(U)                                                      
+             TG:GE0/0/2(U)      GE0/0/3(U)                                      
+
+VID  Status  Property      MAC-LRN Statistics Description      
+--------------------------------------------------------------------------------
+1    enable  default       enable  disable    VLAN 0001                         
+10   enable  default       enable  disable    VLAN 0010                         
+20   enable  default       enable  disable    VLAN 0020                         
+100  enable  default       enable  disable    VLAN 0100</pre>
+        </div>
+        
+        <div class="section">
+            <h2>路由表信息</h2>
+            <pre>Route Flags: R - relay, D - download to fib
+------------------------------------------------------------------------------
+Routing Tables: Public
+         Destinations : 10       Routes : 11       
+
+Destination/Mask    Proto   Pre  Cost      Flags NextHop         Interface
+
+        0.0.0.0/0   Static  60   0          RD   192.168.100.1   Vlanif100
+       10.0.0.0/24  Static  60   0          RD   192.168.100.1   Vlanif100
+                    Static  60   0          RD   192.168.100.24  Vlanif100
+      127.0.0.0/8   Direct  0    0           D   127.0.0.1       InLoopBack0
+      127.0.0.1/32  Direct  0    0           D   127.0.0.1       InLoopBack0
+   192.168.10.0/24  Direct  0    0           D   192.168.10.1    Vlanif10
+   192.168.10.1/32  Direct  0    0           D   127.0.0.1       Vlanif10
+   192.168.20.0/24  Direct  0    0           D   192.168.20.1    Vlanif20
+   192.168.20.1/32  Direct  0    0           D   127.0.0.1       Vlanif20
+  192.168.100.0/24  Direct  0    0           D   192.168.100.2   Vlanif100
+  192.168.100.2/32  Direct  0    0           D   127.0.0.1       Vlanif100</pre>
+        </div>
+        
+        <div class="section">
+            <h2>接口信息</h2>
+            <pre>*down: administratively down
+^down: standby
+(l): loopback
+(s): spoofing
+The number of interface that is UP in Physical is 5
+The number of interface that is DOWN in Physical is 1
+The number of interface that is UP in Protocol is 4
+The number of interface that is DOWN in Protocol is 2
+
+Interface                         IP Address/Mask      Physical   Protocol  
+MEth0/0/1                         unassigned           down       down      
+NULL0                             unassigned           up         up(s)     
+Vlanif1                           unassigned           up         down      
+Vlanif10                          192.168.10.1/24      up         up        
+Vlanif20                          192.168.20.1/24      up         up        
+Vlanif100                         192.168.100.2/24     up         up</pre>
+        </div>
+    </div>
+</body>
+</html>
+    

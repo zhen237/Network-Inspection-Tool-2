@@ -1,13 +1,17 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_file
 from flask_socketio import SocketIO, emit
 import socket
 import time
 import os
 import json
+import datetime
+from jinja2 import Template
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ensp-mcp'
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['INSPECTION_FOLDER'] = 'inspections'
+app.config['BASELINE_FOLDER'] = 'baselines'
 socketio = SocketIO(app, cors_allowed_origins='*')
 
 devices = {}
@@ -15,6 +19,8 @@ device_names = {}
 topology_data = {}
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['INSPECTION_FOLDER'], exist_ok=True)
+os.makedirs(app.config['BASELINE_FOLDER'], exist_ok=True)
 
 
 class TelnetConnection:
@@ -32,9 +38,110 @@ class TelnetConnection:
         return True
 
     def send_cmd(self, cmd):
-        self.sock.send(f'{cmd}\r\n'.encode())
-        time.sleep(1.5)
-        return self.sock.recv(8192).decode('gbk', errors='ignore')
+        try:
+            # 发送命令
+            self.sock.send(f'{cmd}\r\n'.encode())
+            
+            # 等待设备处理命令
+            time.sleep(0.5)
+            
+            # 开始接收数据
+            response = b''
+            start_time = time.time()
+            timeout = 30 if 'configuration' in cmd else 8
+            
+            # 设置合理的接收超时
+            self.sock.settimeout(2.0)
+            
+            while time.time() - start_time < timeout:
+                try:
+                    data = self.sock.recv(8192)
+                    if not data:
+                        break
+                    response += data
+                    # 检查是否收到命令提示符
+                    if b'>' in response or b'#' in response:
+                        # 等待一下，确保所有数据都已接收
+                        time.sleep(0.5)
+                        # 尝试再接收一次，确保没有遗漏数据
+                        try:
+                            more_data = self.sock.recv(8192)
+                            if more_data:
+                                response += more_data
+                        except:
+                            pass
+                        break
+                except socket.timeout:
+                    # 超时是正常的，继续尝试接收
+                    if response:
+                        break
+                    continue
+                except Exception as e:
+                    # 其他错误，中断接收
+                    break
+            
+            # 确保返回至少部分响应
+            if not response:
+                return 'No response from device'
+            
+            # 清理响应，只保留命令输出，移除命令回显和命令提示符
+            response_str = response.decode('gbk', errors='ignore')
+            
+            # 检查是否只包含控制字符和空白字符
+            import re
+            if re.match(r'^[\s\x00-\x1F\x7F]*$', response_str):
+                return 'No configuration available'
+            
+            # 检查是否包含错误信息
+            if 'Error:' in response_str:
+                # 直接返回错误信息，不尝试清理命令
+                return response_str
+            
+            # 移除命令回显，但保留命令输出
+            if cmd in response_str:
+                # 对于 display version 命令，只移除命令本身，保留所有输出
+                if 'display version' in cmd:
+                    # 找到命令在响应中的位置
+                    cmd_pos = response_str.find(cmd)
+                    if cmd_pos >= 0:
+                        # 从命令结束位置开始提取输出
+                        response_str = response_str[cmd_pos + len(cmd):].strip()
+                else:
+                    response_str = response_str.replace(cmd, '').strip()
+            # 处理命令被设备提示符覆盖的情况（如 [LSW2]isplay current-configuration）
+            elif cmd[1:] in response_str:
+                # 尝试移除不完整的命令
+                response_str = response_str.replace(cmd[1:], '').strip()
+            
+            # 移除最后的命令提示符
+            if '>' in response_str:
+                response_str = response_str.split('>')[0].strip()
+            elif '#' in response_str:
+                response_str = response_str.split('#')[0].strip()
+            
+            # 移除设备名称标记（如 <LSW3>）
+            import re
+            response_str = re.sub(r'<\w+\s*$', '', response_str).strip()
+            
+            # 清理系统时间格式
+            if 'display clock' in cmd:
+                # 尝试规范化时间格式
+                lines = response_str.split('\n')
+                clean_lines = []
+                for line in lines:
+                    line = line.strip()
+                    if line:
+                        # 处理时间格式，确保有适当的空格
+                        if re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', line):
+                            # 为星期和时区添加空格
+                            line = re.sub(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})(\w+)', r'\1 \2', line)
+                            line = re.sub(r'(Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)(Time Zone)', r'\1 \2', line)
+                        clean_lines.append(line)
+                response_str = '\n'.join(clean_lines)
+            
+            return response_str
+        except Exception as e:
+            return f'Error: {str(e)}'
 
     def close(self):
         if self.sock:
@@ -81,6 +188,55 @@ def send_command(path: str, command: str):
         return {'success': False, 'error': 'Device not connected'}
     try:
         result = devices[path].send_cmd(command)
+        
+        # 检查是否是 compare configuration 命令
+        if command.strip() == 'compare configuration':
+            # 尝试找到最新的巡检文件并追加比对结果
+            try:
+                device_name = device_names.get(path, path)
+                inspection_dir = app.config['INSPECTION_FOLDER']
+                
+                # 查找该设备的巡检文件
+                import re
+                import os
+                # 与 inspect_device 函数使用相同的文件名生成逻辑，只替换冒号
+                device_pattern = re.escape(path.replace(':', '_'))
+                pattern = f'inspection_{device_pattern}_.*\.html'
+                
+                inspection_files = []
+                for filename in os.listdir(inspection_dir):
+                    if re.match(pattern, filename):
+                        filepath = os.path.join(inspection_dir, filename)
+                        mtime = os.path.getmtime(filepath)
+                        inspection_files.append((mtime, filepath))
+                
+                # 按修改时间排序，取最新的
+                if inspection_files:
+                    inspection_files.sort(reverse=True)
+                    latest_inspection = inspection_files[0][1]
+                    
+                    # 读取现有报告
+                    with open(latest_inspection, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # 找到 </body> 标签并在其前插入比对结果
+                    if '</body>' in content:
+                        comparison_section = f'''
+        <div class="section">
+            <h2>配置比对结果</h2>
+            <pre>{result}</pre>
+        </div>'''
+                        new_content = content.replace('</body>', comparison_section + '\n</body>')
+                        
+                        # 写回文件
+                        with open(latest_inspection, 'w', encoding='utf-8') as f:
+                            f.write(new_content)
+            except Exception as e:
+                # 追加比对结果失败，打印错误信息以便调试
+                print(f"追加比对结果失败: {str(e)}")
+                # 不影响命令执行
+                pass
+        
         return {'success': True, 'path': path, 'output': result}
     except Exception as e:
         return {'success': False, 'error': str(e)}
@@ -115,13 +271,159 @@ def rename_device(path: str, name: str):
 
 
 def get_topology():
+    # 尝试从文件加载拓扑数据
+    topology_file = os.path.join(app.config['UPLOAD_FOLDER'], 'topology.json')
+    if os.path.exists(topology_file):
+        try:
+            with open(topology_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
     return topology_data
 
 
 def save_topology(data):
     global topology_data
     topology_data = data
+    # 持久化存储到文件
+    topology_file = os.path.join(app.config['UPLOAD_FOLDER'], 'topology.json')
+    with open(topology_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
     return {'success': True, 'topology': topology_data}
+
+
+def inspect_device(path: str):
+    if path not in devices:
+        return {'success': False, 'error': 'Device not connected'}
+    
+    try:
+        conn = devices[path]
+        device_info = {
+            'name': device_names.get(path, path),
+            'path': path,
+            'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # 收集设备版本信息
+        version_output = conn.send_cmd('display version')
+        device_info['version'] = version_output
+        time.sleep(0.5)  # 添加等待时间
+        
+        # 收集系统时间
+        clock_output = conn.send_cmd('display clock')
+        device_info['clock'] = clock_output
+        time.sleep(0.5)  # 添加等待时间
+        
+        # 收集 VLAN 信息
+        vlan_output = conn.send_cmd('display vlan')
+        device_info['vlan'] = vlan_output
+        time.sleep(0.5)  # 添加等待时间
+        
+        # 收集路由表信息
+        routing_output = conn.send_cmd('display ip routing-table')
+        device_info['routing'] = routing_output
+        time.sleep(0.5)  # 添加等待时间
+        
+        # 收集接口信息
+        interface_output = conn.send_cmd('display ip interface brief')
+        device_info['interfaces'] = interface_output
+        time.sleep(0.5)  # 添加等待时间
+        
+        # 生成 HTML 报告
+        html_report = generate_inspection_report(device_info)
+        
+        # 保存报告文件
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'inspection_{path.replace(":", "_")}_{timestamp}.html'
+        filepath = os.path.join(app.config['INSPECTION_FOLDER'], filename)
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(html_report)
+        
+        return {
+            'success': True,
+            'path': path,
+            'report': html_report,
+            'filename': filename,
+            'filepath': filepath
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+def generate_inspection_report(device_info):
+    template = Template('''
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备巡检报告 - {{ device.name }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; background: #f8f9fa; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: #2c3e50; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #007bff; }
+        h2 { color: #34495e; margin: 20px 0 10px; padding-bottom: 5px; border-bottom: 1px solid #dee2e6; }
+        .info-box { background: #ffffff; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .info-item { margin: 10px 0; }
+        .info-label { font-weight: bold; color: #2c3e50; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px; border: 1px solid #dee2e6; }
+        .timestamp { color: #6c757d; font-size: 14px; margin-bottom: 20px; }
+        .section { margin: 30px 0; background: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>设备巡检报告</h1>
+        <div class="timestamp">生成时间: {{ device.timestamp }}</div>
+        
+        <div class="section">
+            <h2>基本信息</h2>
+            <div class="info-box">
+                <div class="info-item"><span class="info-label">设备名称:</span> {{ device.name }}</div>
+                <div class="info-item"><span class="info-label">设备路径:</span> {{ device.path }}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>版本信息</h2>
+            <pre>{{ device.version }}</pre>
+        </div>
+        
+        <div class="section">
+            <h2>系统时间</h2>
+            <pre>{{ device.clock }}</pre>
+        </div>
+        
+        <div class="section">
+            <h2>VLAN 信息</h2>
+            <pre>{{ device.vlan }}</pre>
+        </div>
+        
+        <div class="section">
+            <h2>路由表信息</h2>
+            <pre>{{ device.routing }}</pre>
+        </div>
+        
+        <div class="section">
+            <h2>接口信息</h2>
+            <pre>{{ device.interfaces }}</pre>
+        </div>
+    </div>
+</body>
+</html>
+    ''')
+    return template.render(device=device_info)
+
+
+
+
+
+
+
+
+
 
 
 @app.route('/')
@@ -221,6 +523,62 @@ def api_upload_topology_file():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/devices/inspect', methods=['POST'])
+def api_inspect():
+    data = request.get_json()
+    path = data.get('path')
+    result = inspect_device(path)
+    if result['success']:
+        socketio.emit('device_inspected', {
+            'path': path,
+            'filename': result['filename'],
+            'filepath': result['filepath']
+        })
+    else:
+        socketio.emit('device_error', {'path': path, 'error': result['error']})
+    return jsonify(result)
+
+
+@app.route('/api/devices/baseline', methods=['POST'])
+def api_save_baseline():
+    data = request.get_json()
+    path = data.get('path')
+    result = save_baseline(path)
+    if result['success']:
+        socketio.emit('baseline_saved', {
+            'path': path,
+            'filename': result['filename'],
+            'filepath': result['filepath']
+        })
+    else:
+        socketio.emit('device_error', {'path': path, 'error': result['error']})
+    return jsonify(result)
+
+
+@app.route('/api/devices/compare', methods=['POST'])
+def api_compare_baseline():
+    data = request.get_json()
+    path = data.get('path')
+    baseline_file = data.get('baseline_file')
+    result = compare_with_baseline(path, baseline_file)
+    if result['success']:
+        socketio.emit('baseline_compared', {
+            'path': path,
+            'baseline': baseline_file,
+            'filename': result['filename'],
+            'filepath': result['filepath']
+        })
+    else:
+        socketio.emit('device_error', {'path': path, 'error': result['error']})
+    return jsonify(result)
+
+
+
+
+
+
+
+
 @socketio.on('scan')
 def on_scan(data):
     start = data.get('start', 2000)
@@ -272,6 +630,29 @@ def on_rename_device(data):
     emit('device_renamed', {'path': path, 'name': new_name})
 
 
+@socketio.on('inspect_device')
+def on_inspect(data):
+    path = data.get('path')
+    result = inspect_device(path)
+    if result['success']:
+        emit('device_inspected', {
+            'path': path,
+            'filename': result['filename'],
+            'filepath': result['filepath']
+        })
+    else:
+        emit('device_error', {'path': path, 'error': result['error']})
+
+
+@app.route('/inspections/<filename>')
+def serve_inspection(filename):
+    filepath = os.path.join(app.config['INSPECTION_FOLDER'], filename)
+    if os.path.exists(filepath):
+        return send_file(filepath, as_attachment=True)
+    else:
+        return jsonify({'error': 'File not found'}), 404
+
+
 if __name__ == '__main__':
-    print('eNSP Server starting on http://127.0.0.1:5000')
-    socketio.run(app, host='0.0.0.0', port=5000)
+    print('eNSP Server starting on http://127.0.0.1:5001')
+    socketio.run(app, host='0.0.0.0', port=5001)
