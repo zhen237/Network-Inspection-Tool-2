@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eNSP 网络拓扑图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .topology-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            min-height: 600px;
+        }
+        .topology-canvas {
+            position: relative;
+            width: 100%;
+            height: 550px;
+            background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .device {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            border: 3px solid #4a90e2;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        .device:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border-color: #2c5aa0;
+        }
+        .device.switch {
+            border-color: #27ae60;
+        }
+        .device.switch:hover {
+            border-color: #1e8449;
+        }
+        .device-icon {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+        .device-name {
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            word-break: break-word;
+        }
+        .device-port {
+            font-size: 10px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .device-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 20;
+        }
+        .device-info h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .device-info ul {
+            list-style: none;
+            color: #666;
+            font-size: 14px;
+        }
+        .device-info li {
+            margin: 5px 0;
+        }
+        .connection-line {
+            position: absolute;
+            background: linear-gradient(90deg, #4a90e2, #2c5aa0);
+            height: 4px;
+            transform-origin: left center;
+            z-index: 5;
+            border-radius: 2px;
+        }
+        .connection-line.active {
+            background: linear-gradient(90deg, #27ae60, #1e8449);
+            box-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
+        }
+        .legend {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .legend h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .legend-items {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .legend-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .legend-icon.switch {
+            border: 2px solid #27ae60;
+        }
+        .legend-icon.line {
+            width: 50px;
+            height: 4px;
+            background: linear-gradient(90deg, #4a90e2, #2c5aa0);
+            border-radius: 2px;
+        }
+        .legend-icon.line.active {
+            background: linear-gradient(90deg, #27ae60, #1e8449);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 eNSP 网络设备拓扑图</h1>
+        
+        <div class="topology-container">
+            <div class="device-info">
+                <h3>📊 设备信息</h3>
+                <ul>
+                    <li>📱 总设备数: 5 台</li>
+                    <li>🔄 已连接: 5 台</li>
+                    <li>💡 状态: 全部在线</li>
+                </ul>
+            </div>
+            
+            <div class="topology-canvas" id="topologyCanvas">
+                <!-- 设备将通过 JavaScript 动态添加 -->
+            </div>
+        </div>
+        
+        <div class="legend">
+            <h3>📋 图例说明</h3>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-icon switch">🔌</div>
+                    <span>交换机设备</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon line"></div>
+                    <span>网络连接</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon line active"></div>
+                    <span>活跃连接</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 设备数据
+        const devices = [
+            { id: 1, name: "LSW1", port: 2001, type: "switch", x: 200, y: 150 },
+            { id: 2, name: "sysname", port: 2002, type: "switch", x: 500, y: 100 },
+            { id: 3, name: "LSW3", port: 2003, type: "switch", x: 800, y: 150 },
+            { id: 4, name: "Access_LSW4", port: 2004, type: "switch", x: 350, y: 350 },
+            { id: 5, name: "lsw7", port: 2007, type: "switch", x: 650, y: 350 }
+        ];
+
+        // 连接关系
+        const connections = [
+            { from: 1, to: 2, active: true },
+            { from: 2, to: 3, active: true },
+            { from: 1, to: 4, active: true },
+            { from: 3, to: 5, active: true },
+            { from: 4, to: 5, active: true }
+        ];
+
+        // 创建设备元素
+        function createDeviceElement(device) {
+            const el = document.createElement('div');
+            el.className = `device ${device.type}`;
+            el.style.left = `${device.x}px`;
+            el.style.top = `${device.y}px`;
+            el.innerHTML = `
+                <div class="device-icon">🔌</div>
+                <div class="device-name">${device.name}</div>
+                <div class="device-port">端口 ${device.port}</div>
+            `;
+            el.onclick = () => alert(`设备: ${device.name}\n端口: ${device.port}\n类型: ${device.type}`);
+            return el;
+        }
+
+        // 创建连接线
+        function createConnection(from, to, active) {
+            const fromDev = devices.find(d => d.id === from);
+            const toDev = devices.find(d => d.id === to);
+            
+            const x1 = fromDev.x + 60;
+            const y1 = fromDev.y + 60;
+            const x2 = toDev.x + 60;
+            const y2 = toDev.y + 60;
+            
+            const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+            
+            const line = document.createElement('div');
+            line.className = `connection-line ${active ? 'active' : ''}`;
+            line.style.left = `${x1}px`;
+            line.style.top = `${y1}px`;
+            line.style.width = `${length}px`;
+            line.style.transform = `rotate(${angle}deg)`;
+            return line;
+        }
+
+        // 渲染拓扑图
+        function renderTopology() {
+            const canvas = document.getElementById('topologyCanvas');
+            
+            // 添加连接线
+            connections.forEach(conn => {
+                canvas.appendChild(createConnection(conn.from, conn.to, conn.active));
+            });
+            
+            // 添加设备
+            devices.forEach(device => {
+                canvas.appendChild(createDeviceElement(device));
+            });
+        }
+
+        // 初始化
+        renderTopology();
+    </script>
+</body>
+</html>

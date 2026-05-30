@@ -6,7 +6,7 @@ from mcp.types import Tool, TextContent
 from mcp.server.stdio import stdio_server
 
 MCP_SERVER_NAME = "ensp-mcp-server"
-SERVER_URL = "http://127.0.0.1:5000"
+SERVER_URL = "http://127.0.0.1:5001"
 
 mcp_server = Server(MCP_SERVER_NAME)
 
