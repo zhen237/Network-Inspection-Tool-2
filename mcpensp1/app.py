@@ -5,6 +5,7 @@ import time
 import os
 import json
 import datetime
+import re
 from jinja2 import Template
 
 app = Flask(__name__)
@@ -88,7 +89,6 @@ class TelnetConnection:
             response_str = response.decode('gbk', errors='ignore')
             
             # 检查是否只包含控制字符和空白字符
-            import re
             if re.match(r'^[\s\x00-\x1F\x7F]*$', response_str):
                 return 'No configuration available'
             
@@ -112,6 +112,12 @@ class TelnetConnection:
             elif cmd[1:] in response_str:
                 # 尝试移除不完整的命令
                 response_str = response_str.replace(cmd[1:], '').strip()
+            # 处理命令被设备提示符和其他字符覆盖的情况
+            else:
+                # 检查是否是版本命令的错误情况
+                if 'display version' in cmd and 'isplay version' in response_str:
+                    # 移除不完整的命令
+                    response_str = response_str.replace('isplay version', '').strip()
             
             # 移除最后的命令提示符
             if '>' in response_str:
@@ -120,7 +126,6 @@ class TelnetConnection:
                 response_str = response_str.split('#')[0].strip()
             
             # 移除设备名称标记（如 <LSW3>）
-            import re
             response_str = re.sub(r'<\w+\s*$', '', response_str).strip()
             
             # 清理系统时间格式
@@ -197,8 +202,6 @@ def send_command(path: str, command: str):
                 inspection_dir = app.config['INSPECTION_FOLDER']
                 
                 # 查找该设备的巡检文件
-                import re
-                import os
                 # 与 inspect_device 函数使用相同的文件名生成逻辑，只替换冒号
                 device_pattern = re.escape(path.replace(':', '_'))
                 pattern = f'inspection_{device_pattern}_.*\.html'
@@ -539,38 +542,7 @@ def api_inspect():
     return jsonify(result)
 
 
-@app.route('/api/devices/baseline', methods=['POST'])
-def api_save_baseline():
-    data = request.get_json()
-    path = data.get('path')
-    result = save_baseline(path)
-    if result['success']:
-        socketio.emit('baseline_saved', {
-            'path': path,
-            'filename': result['filename'],
-            'filepath': result['filepath']
-        })
-    else:
-        socketio.emit('device_error', {'path': path, 'error': result['error']})
-    return jsonify(result)
 
-
-@app.route('/api/devices/compare', methods=['POST'])
-def api_compare_baseline():
-    data = request.get_json()
-    path = data.get('path')
-    baseline_file = data.get('baseline_file')
-    result = compare_with_baseline(path, baseline_file)
-    if result['success']:
-        socketio.emit('baseline_compared', {
-            'path': path,
-            'baseline': baseline_file,
-            'filename': result['filename'],
-            'filepath': result['filepath']
-        })
-    else:
-        socketio.emit('device_error', {'path': path, 'error': result['error']})
-    return jsonify(result)
 
 
 
@@ -644,11 +616,40 @@ def on_inspect(data):
         emit('device_error', {'path': path, 'error': result['error']})
 
 
+@app.route('/api/inspections/list')
+def list_inspections():
+    inspection_dir = app.config['INSPECTION_FOLDER']
+    files = []
+    if os.path.exists(inspection_dir):
+        for filename in os.listdir(inspection_dir):
+            if filename.startswith('inspection_') and filename.endswith('.html'):
+                filepath = os.path.join(inspection_dir, filename)
+                mtime = os.path.getmtime(filepath)
+                size = os.path.getsize(filepath)
+                files.append({
+                    'filename': filename,
+                    'mtime': mtime,
+                    'size': size
+                })
+    # 按时间倒序排列
+    files.sort(key=lambda x: x['mtime'], reverse=True)
+    return jsonify({'inspections': files})
+
+
 @app.route('/inspections/<filename>')
 def serve_inspection(filename):
     filepath = os.path.join(app.config['INSPECTION_FOLDER'], filename)
     if os.path.exists(filepath):
         return send_file(filepath, as_attachment=True)
+    else:
+        return jsonify({'error': 'File not found'}), 404
+
+
+@app.route('/inspections/view/<filename>')
+def view_inspection(filename):
+    filepath = os.path.join(app.config['INSPECTION_FOLDER'], filename)
+    if os.path.exists(filepath):
+        return send_file(filepath, mimetype='text/html')
     else:
         return jsonify({'error': 'File not found'}), 404
 

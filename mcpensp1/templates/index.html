@@ -41,10 +41,6 @@
     .disconnect-btn:hover { background: #c82333; }
     .inspect-btn { background: #ffc107; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; color: #212529; font-size: 11px; font-weight: 500; }
     .inspect-btn:hover { background: #e0a800; }
-    .baseline-btn { background: #17a2b8; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; color: white; font-size: 11px; font-weight: 500; }
-    .baseline-btn:hover { background: #138496; }
-    .compare-btn { background: #6f42c1; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; color: white; font-size: 11px; font-weight: 500; }
-    .compare-btn:hover { background: #5a32a3; }
     .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f8f9fa; }
     .tabs { background: #ffffff; border-bottom: 1px solid #e9ecef; display: flex; padding: 0 10px; overflow-x: auto; min-height: 44px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .tab { padding: 12px 18px; font-size: 13px; color: #6c757d; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; display: flex; align-items: center; gap: 10px; flex-shrink: 0; font-weight: 500; }
@@ -84,6 +80,17 @@
     .modal-btn.confirm:hover { background: #0069d9; }
     a { color: #007bff; text-decoration: none; }
     a:hover { text-decoration: underline; }
+    .reports-btn { background: #8b5cf6; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; color: white; font-size: 12px; font-weight: 500; }
+    .reports-btn:hover { background: #7c3aed; }
+    .quick-commands { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 12px; background: #ffffff; border-bottom: 1px solid #e9ecef; }
+    .quick-btn { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 4px; cursor: pointer; color: #475569; font-size: 11px; font-weight: 500; }
+    .quick-btn:hover { background: #e2e8f0; border-color: #cbd5e1; }
+    #reportsModal .modal-content { min-width: 450px; max-height: 70vh; display: flex; flex-direction: column; }
+    .reports-list { flex: 1; overflow-y: auto; }
+    .report-item { padding: 10px 14px; border-bottom: 1px solid #e9ecef; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .report-item:hover { background: #f8f9fa; }
+    .report-name { font-size: 12px; color: #475569; }
+    .report-time { font-size: 11px; color: #94a3b8; }
   </style>
 </head>
 <body>
@@ -92,6 +99,7 @@
       <h1>eNSP MCP</h1>
       <button class="scan-btn" onclick="scanDevices()">扫描</button>
       <button class="upload-btn" onclick="document.getElementById('topologyInput').click()">上传拓扑</button>
+      <button class="reports-btn" onclick="openReportsModal()">历史报告</button>
       <input type="file" id="topologyInput" style="display:none" accept=".json,.txt" onchange="uploadTopology(this.files[0])">
       <span id="topologyIndicator" class="topology-indicator"></span>
     </div>
@@ -125,6 +133,16 @@
       <div class="modal-buttons">
         <button class="modal-btn cancel" onclick="closeRenameModal()">取消</button>
         <button class="modal-btn confirm" onclick="confirmRename()">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="reportsModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-title">历史巡检报告</div>
+      <div class="reports-list" id="reportsList"></div>
+      <div class="modal-buttons">
+        <button class="modal-btn cancel" onclick="closeReportsModal()">关闭</button>
       </div>
     </div>
   </div>
@@ -351,6 +369,15 @@
           <span>${escapeHtml(displayName)}</span>
           <span class="rename-icon" onclick="openRenameModal('${path}', '${displayName}')">[✎]</span>
         </div>
+        <div class="quick-commands">
+          <button class="quick-btn" onclick="quickCommand('${path}', 'display version')">版本</button>
+          <button class="quick-btn" onclick="quickCommand('${path}', 'display clock')">时间</button>
+          <button class="quick-btn" onclick="quickCommand('${path}', 'display vlan')">VLAN</button>
+          <button class="quick-btn" onclick="quickCommand('${path}', 'display ip interface brief')">接口</button>
+          <button class="quick-btn" onclick="quickCommand('${path}', 'display ip routing-table')">路由</button>
+          <button class="quick-btn" onclick="quickCommand('${path}', 'display current-configuration')">配置</button>
+          <button class="quick-btn" onclick="quickCommand('${path}', 'compare configuration')">比对</button>
+        </div>
         <div class="terminal-body" id="body-${path.replace(/\./g, '-')}"></div>
         <div class="terminal-input">
           <span class="prompt">$</span>
@@ -456,6 +483,60 @@
     function inspectDevice(path) {
       log(`正在巡检 ${deviceNames[path] || path}...`);
       socket.emit('inspect_device', { path });
+    }
+
+    function quickCommand(path, cmd) {
+      if (!terminalData[path]) terminalData[path] = [];
+      terminalData[path].push({ type: 'input', text: '$ ' + cmd });
+      renderTerminal(path);
+      socket.emit('send_command', { path, command: cmd });
+    }
+
+    function openReportsModal() {
+      document.getElementById('reportsModal').style.display = 'flex';
+      loadReports();
+    }
+
+    function closeReportsModal() {
+      document.getElementById('reportsModal').style.display = 'none';
+    }
+
+    function loadReports() {
+      const list = document.getElementById('reportsList');
+      list.innerHTML = '<div style="padding: 20px; text-align: center; color: #94a3b8; font-size: 12px;">加载中...</div>';
+      
+      fetch('/api/inspections/list')
+        .then(r => r.json())
+        .then(data => {
+          if (!data.inspections || data.inspections.length === 0) {
+            list.innerHTML = '<div style="padding: 20px; text-align: center; color: #94a3b8; font-size: 12px;">暂无巡检报告</div>';
+            return;
+          }
+          
+          list.innerHTML = data.inspections.map(report => {
+            const date = new Date(report.mtime * 1000);
+            const timeStr = date.toLocaleString('zh-CN');
+            return `
+              <div class="report-item" onclick="viewReport('${report.filename}')">
+                <div>
+                  <div class="report-name">${escapeHtml(report.filename)}</div>
+                  <div class="report-time">${timeStr}</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <a href="/inspections/view/${report.filename}" target="_blank" onclick="event.stopPropagation()" style="color: #007bff; font-size: 11px;">查看</a>
+                  <a href="/inspections/${report.filename}" onclick="event.stopPropagation()" style="color: #007bff; font-size: 11px;">下载</a>
+                </div>
+              </div>
+            `;
+          }).join('');
+        })
+        .catch(err => {
+          list.innerHTML = `<div style="padding: 20px; text-align: center; color: #dc3545; font-size: 12px;">加载失败: ${err.message}</div>`;
+        });
+    }
+
+    function viewReport(filename) {
+      window.open('/inspections/view/' + filename, '_blank');
     }
 
     function log(msg, type = '') {
