@@ -636,20 +636,28 @@ def list_inspections():
     return jsonify({'inspections': files})
 
 
-@app.route('/inspections/<filename>')
+@app.route('/inspections/<path:filename>')
 def serve_inspection(filename):
-    filepath = os.path.join(app.config['INSPECTION_FOLDER'], filename)
+    inspection_dir = app.config['INSPECTION_FOLDER']
+    filepath = os.path.join(inspection_dir, filename)
     if os.path.exists(filepath):
-        return send_file(filepath, as_attachment=True)
+        try:
+            return send_file(filepath, as_attachment=True)
+        except Exception as e:
+            return jsonify({'error': f'下载失败: {str(e)}'}), 500
     else:
         return jsonify({'error': 'File not found'}), 404
 
 
-@app.route('/inspections/view/<filename>')
+@app.route('/inspections/view/<path:filename>')
 def view_inspection(filename):
-    filepath = os.path.join(app.config['INSPECTION_FOLDER'], filename)
+    inspection_dir = app.config['INSPECTION_FOLDER']
+    filepath = os.path.join(inspection_dir, filename)
     if os.path.exists(filepath):
-        return send_file(filepath, mimetype='text/html')
+        try:
+            return send_file(filepath, mimetype='text/html')
+        except Exception as e:
+            return jsonify({'error': f'查看失败: {str(e)}'}), 500
     else:
         return jsonify({'error': 'File not found'}), 404
 

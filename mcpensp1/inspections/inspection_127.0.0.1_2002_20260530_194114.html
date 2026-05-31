@@ -34,11 +34,16 @@
         
         <div class="section">
             <h2>版本信息</h2>
-            <pre>Huawei Versatile Routing Platform Software
-VRP (R) software, Version 5.110 (S3700 V200R001C00)
-Copyright (c) 2000-2011 HUAWEI TECH CO., LTD
-
-Quidway S3700-26C-HI Routing Switch uptime is 0 week, 0 day, 0 hour, 47 minutes
+            <pre>Huawei Versatile Routing Platform Software
+
+VRP (R) software, Version 5.110 (S3700 V200R001C00)
+
+Copyright (c) 2000-2011 HUAWEI TECH CO., LTD
+
+
+
+Quidway S3700-26C-HI Routing Switch uptime is 0 week, 0 day, 0 hour, 47 minutes
+
 [LSW2]</pre>
         </div>
         
@@ -52,49 +57,113 @@ Time Zone(China-Standard-Time) : UTC-08:00
         
         <div class="section">
             <h2>VLAN 信息</h2>
-            <pre>The total number of vlans is : 3
---------------------------------------------------------------------------------
-U: Up;         D: Down;         TG: Tagged;         UT: Untagged;
+            <pre>The total number of vlans is : 3
+
+--------------------------------------------------------------------------------
+
+U: Up;         D: Down;         TG: Tagged;         UT: Untagged;
+
 MP: Vlan-mapping;               ST: Vlan-stacking;</pre>
         </div>
         
         <div class="section">
             <h2>路由表信息</h2>
-            <pre>Route Flags: R - relay, D - download to fib
-------------------------------------------------------------------------------
-Routing Tables: Public
-         Destinations : 5        Routes : 5        
-
-Destination/Mask    Proto   Pre  Cost      Flags NextHop         Interface
-
-        0.0.0.0/0   Static  60   0          RD   192.168.100.2   Vlanif100
-      127.0.0.0/8   Direct  0    0           D   127.0.0.1       InLoopBack0
-      127.0.0.1/32  Direct  0    0           D   127.0.0.1       InLoopBack0
-  192.168.100.0/24  Direct  0    0           D   192.168.100.3   Vlanif100
-  192.168.100.3/32  Direct  0    0           D   127.0.0.1       Vlanif100
-
+            <pre>Route Flags: R - relay, D - download to fib
+
+------------------------------------------------------------------------------
+
+Routing Tables: Public
+
+         Destinations : 5        Routes : 5        
+
+
+
+Destination/Mask    Proto   Pre  Cost      Flags NextHop         Interface
+
+
+
+        0.0.0.0/0   Static  60   0          RD   192.168.100.2   Vlanif100
+
+      127.0.0.0/8   Direct  0    0           D   127.0.0.1       InLoopBack0
+
+      127.0.0.1/32  Direct  0    0           D   127.0.0.1       InLoopBack0
+
+  192.168.100.0/24  Direct  0    0           D   192.168.100.3   Vlanif100
+
+  192.168.100.3/32  Direct  0    0           D   127.0.0.1       Vlanif100
+
+
+
 [LSW2]</pre>
         </div>
         
         <div class="section">
             <h2>接口信息</h2>
-            <pre>*down: administratively down
-^down: standby
-(l): loopback
-(s): spoofing
-The number of interface that is UP in Physical is 3
-The number of interface that is DOWN in Physical is 1
-The number of interface that is UP in Protocol is 2
+            <pre>*down: administratively down
+
+^down: standby
+
+(l): loopback
+
+(s): spoofing
+
+The number of interface that is UP in Physical is 3
+
+The number of interface that is DOWN in Physical is 1
+
+The number of interface that is UP in Protocol is 2
+
 The number of interface that is DOWN in Protocol is 2
-
-Interface                         IP Address/Mask      Physical   Protocol  
-MEth0/0/1                         unassigned           down       down      
-NULL0                             unassigned           up         up(s)     
-Vlanif1                           unassigned           up         down      
-Vlanif100                         192.168.100.3/24     up         up        
+
+
+Interface                         IP Address/Mask      Physical   Protocol  
+
+MEth0/0/1                         unassigned           down       down      
+
+NULL0                             unassigned           up         up(s)     
+
+Vlanif1                           unassigned           up         down      
+
+Vlanif100                         192.168.100.3/24     up         up        
+
 [LSW2]</pre>
         </div>
     </div>
+
+        <div class="section">
+            <h2>配置比对结果</h2>
+            <pre>Info: The current configuration is the same as the next startup configuration file.
+
+<access-lsw2</pre>
+        </div>
+
+        <div class="section">
+            <h2>配置比对结果</h2>
+            <pre>compare configuration
+
+             ^
+
+Error: Unrecognized command found at '^' position.
+
+[access-lsw2]</pre>
+        </div>
+
+        <div class="section">
+            <h2>配置比对结果</h2>
+            <pre>compare configuration
+
+             ^
+
+Error: Unrecognized command found at '^' position.
+
+[access-lsw2]</pre>
+        </div>
+
+        <div class="section">
+            <h2>配置比对结果</h2>
+            <pre>Info: The current configuration is the same as the next startup configuration file.
+<access-lsw2</pre>
+        </div>
 </body>
 </html>
     
